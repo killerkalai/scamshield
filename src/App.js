@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_KEY = "PASTE_YOUR_GROQ_KEY_HERE"; // 👈 Replace this with your gsk_... key
+const API_KEY = REACT_APP_API_KEY; // 👈 Replace this with your gsk_... key
 
 const EXAMPLES = [
   { label: "📱 Suspicious SMS", text: "URGENT: Your Bank of America account has been LOCKED due to suspicious activity. Verify now or lose access permanently: http://boa-secure-verify.net/login" },
