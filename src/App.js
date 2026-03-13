@@ -269,8 +269,8 @@ VERDICT: DANGER=clear scam, WARNING=suspicious, SAFE=legitimate. redFlags: 2-5 s
           <div>ScamShield AI · Powered by Claude · 100% Free</div>
           <div>Your messages are never stored · Built to protect everyone</div>
         </div>
+         <Analytics />
       </div>
-      <Analytics />
     </div>
   );
 }
