@@ -1,6 +1,6 @@
+import { useState, useEffect } from "react";
 import { inject } from "@vercel/analytics";
 inject();
-import { useState, useEffect } from "react";
 
 const API_KEY = process.env.REACT_APP_API_KEY; // 👈 Replace this with your gsk_... key
 
