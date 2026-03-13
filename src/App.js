@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { inject } from "@vercel/analytics";
 inject();
+import { Analytics } from "@vercel/analytics/react";
 
 const API_KEY = process.env.REACT_APP_API_KEY; // 👈 Replace this with your gsk_... key
 
@@ -272,6 +273,7 @@ VERDICT: DANGER=clear scam, WARNING=suspicious, SAFE=legitimate. redFlags: 2-5 s
           <div>Your messages are never stored · Built to protect everyone</div>
         </div>
       </div>
+      <Analytics />
     </div>
   );
 }
