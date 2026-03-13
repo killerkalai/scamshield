@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 
-const API_KEY = process.env.REACT_APP_API_KEY; // 👈 Replace this with your sk-ant-... key
+const API_KEY = "PASTE_YOUR_GROQ_KEY_HERE"; // 👈 Replace this with your gsk_... key
 
 const EXAMPLES = [
   { label: "📱 Suspicious SMS", text: "URGENT: Your Bank of America account has been LOCKED due to suspicious activity. Verify now or lose access permanently: http://boa-secure-verify.net/login" },
@@ -111,22 +110,22 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
 {"verdict":"DANGER"|"WARNING"|"SAFE","scamType":"string","riskScore":0-100,"summary":"1-2 sentences","redFlags":["flag1","flag2"],"whatToDo":["action1","action2"]}
 VERDICT: DANGER=clear scam, WARNING=suspicious, SAFE=legitimate. redFlags: 2-5 specific signals. whatToDo: 2-4 action steps.`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
+          "Authorization": `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: "user", content: `Analyze this message:\n\n"${input}"` }],
+          model: "llama3-70b-8192", max_tokens: 1000,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Analyze this message:\n\n"${input}"` }
+          ],
         }),
       });
       const data = await res.json();
-      const text = data.content?.[0]?.text || "";
+      const text = data.choices?.[0]?.message?.content || "";
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       setResult(parsed);
     } catch { setError("Analysis failed. Please try again."); }
