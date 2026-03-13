@@ -117,7 +117,7 @@ VERDICT: DANGER=clear scam, WARNING=suspicious, SAFE=legitimate. redFlags: 2-5 s
           "Authorization": `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
-          model: "llama3-70b-8192", max_tokens: 1000,
+          model: "llama-3.3-70b-versatile", max_tokens: 1000,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `Analyze this message:\n\n"${input}"` }
