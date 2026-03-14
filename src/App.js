@@ -159,30 +159,12 @@ function ContactPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!form.name || !form.email || !form.message) { setError("Please fill in all fields!"); return; }
-    setSending(true); setError("");
-    try {
-      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          service_id: EMAILJS_SERVICE,
-          template_id: EMAILJS_TEMPLATE,
-          user_id: EMAILJS_PUBLIC,
-          template_params: {
-            from_name: form.name,
-            from_email: form.email,
-            subject: form.subject,
-            message: form.message,
-            to_email: "nobodyai.contact@gmail.com",
-          },
-        }),
-      });
-      if (res.ok) setSent(true);
-      else setError("Failed to send. Please try again.");
-    } catch { setError("Failed to send. Please try again."); }
-    finally { setSending(false); }
+    const subject = encodeURIComponent(form.subject || "Message from ScamShield");
+    const body = encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\n\nMessage:\n${form.message}`);
+    window.location.href = `mailto:nobodyai.contact@gmail.com?subject=${subject}&body=${body}`;
+    setSent(true);
   }
 
   return (
