@@ -149,8 +149,42 @@ function PrivacyPage() {
 }
 
 // ── CONTACT PAGE ──
+const EMAILJS_SERVICE = "service_3zbuqcn";
+const EMAILJS_TEMPLATE = "template_tq2nc1i";
+const EMAILJS_PUBLIC = "ZwwUdYtvEea3pO--H";
+
 function ContactPage() {
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+
+  async function handleSubmit() {
+    if (!form.name || !form.email || !form.message) { setError("Please fill in all fields!"); return; }
+    setSending(true); setError("");
+    try {
+      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: EMAILJS_SERVICE,
+          template_id: EMAILJS_TEMPLATE,
+          user_id: EMAILJS_PUBLIC,
+          template_params: {
+            from_name: form.name,
+            from_email: form.email,
+            subject: form.subject,
+            message: form.message,
+            to_email: "nobodyai.contact@gmail.com",
+          },
+        }),
+      });
+      if (res.ok) setSent(true);
+      else setError("Failed to send. Please try again.");
+    } catch { setError("Failed to send. Please try again."); }
+    finally { setSending(false); }
+  }
+
   return (
     <div style={{ maxWidth: "500px", margin: "0 auto", padding: "100px 24px 80px", animation: "fadeSlideUp 0.5s both" }}>
       <div style={{ textAlign: "center", marginBottom: "40px" }}>
@@ -166,10 +200,11 @@ function ContactPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {[["Your Name", "text", "John Doe"], ["Your Email", "email", "john@example.com"], ["Subject", "text", "I found a bug..."]].map(([label, type, placeholder]) => (
-            <div key={label}>
+          {[["Your Name", "text", "John Doe", "name"], ["Your Email", "email", "john@example.com", "email"], ["Subject", "text", "I found a bug...", "subject"]].map(([label, type, placeholder, key]) => (
+            <div key={key}>
               <label style={{ fontSize: "11px", color: "rgba(200,212,224,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "8px" }}>{label}</label>
-              <input type={type} placeholder={placeholder}
+              <input type={type} placeholder={placeholder} value={form[key]}
+                onChange={e => setForm({ ...form, [key]: e.target.value })}
                 style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "8px", padding: "14px 16px", color: "#f0f4f8", fontSize: "14px", fontFamily: "inherit", outline: "none", boxSizing: "border-box", transition: "all 0.2s" }}
                 onFocus={e => e.target.style.borderColor = "rgba(255,184,0,0.5)"}
                 onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.09)"}
@@ -178,21 +213,23 @@ function ContactPage() {
           ))}
           <div>
             <label style={{ fontSize: "11px", color: "rgba(200,212,224,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: "8px" }}>Message</label>
-            <textarea placeholder="Your message here..." rows={5}
+            <textarea placeholder="Your message here..." rows={5} value={form.message}
+              onChange={e => setForm({ ...form, message: e.target.value })}
               style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "8px", padding: "14px 16px", color: "#f0f4f8", fontSize: "14px", fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box", transition: "all 0.2s" }}
               onFocus={e => e.target.style.borderColor = "rgba(255,184,0,0.5)"}
               onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.09)"}
             />
           </div>
-          <button onClick={() => setSent(true)}
-            style={{ width: "100%", padding: "16px", background: "linear-gradient(135deg,#ffb800,#ffd000)", border: "none", borderRadius: "8px", color: "#080c12", fontSize: "13px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", transition: "all 0.3s" }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(255,184,0,0.3)"; }}
+          {error && <div style={{ color: "#ff6b6b", fontSize: "13px", padding: "12px", background: "rgba(255,59,59,0.08)", borderRadius: "8px", border: "1px solid rgba(255,59,59,0.2)" }}>⚠ {error}</div>}
+          <button onClick={handleSubmit} disabled={sending}
+            style={{ width: "100%", padding: "16px", background: sending ? "rgba(255,184,0,0.2)" : "linear-gradient(135deg,#ffb800,#ffd000)", border: "none", borderRadius: "8px", color: sending ? "rgba(255,184,0,0.5)" : "#080c12", fontSize: "13px", fontWeight: "800", letterSpacing: "0.1em", textTransform: "uppercase", cursor: sending ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "all 0.3s" }}
+            onMouseEnter={e => { if (!sending) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(255,184,0,0.3)"; } }}
             onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
-          >Send Message 📨</button>
+          >{sending ? "Sending..." : "Send Message 📨"}</button>
         </div>
       )}
       <div style={{ textAlign: "center", marginTop: "32px", padding: "20px", background: "rgba(255,255,255,0.02)", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.06)" }}>
-        <p style={{ color: "rgba(200,212,224,0.4)", fontSize: "13px", margin: 0, fontFamily: "sans-serif" }}>You can also reach us at<br /><span style={{ color: "#ffb800" }}>support@scamshield.app</span></p>
+        <p style={{ color: "rgba(200,212,224,0.4)", fontSize: "13px", margin: 0, fontFamily: "sans-serif" }}>You can also reach us at<br /><span style={{ color: "#ffb800" }}>nobodyai.contact@gmail.com</span></p>
       </div>
     </div>
   );
