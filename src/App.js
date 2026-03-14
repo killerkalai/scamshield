@@ -220,10 +220,25 @@ function ContactPage() {
 // ── MAIN HOME PAGE ──
 function HomePage() {
   const [input, setText] = useState("");
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [mode, setMode] = useState("text"); // "text" or "image"
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [scanStage, setScanStage] = useState(0);
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImage(reader.result.split(",")[1]); // base64
+      setImagePreview(reader.result);
+      setResult(null);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const stages = ["Initializing scanner", "Parsing message content", "Running AI analysis", "Cross-checking patterns", "Generating report"];
 
@@ -235,18 +250,33 @@ function HomePage() {
   }, [loading]);
 
   async function analyze() {
-    if (!input.trim()) return;
+    if (mode === "text" && !input.trim()) return;
+    if (mode === "image" && !image) return;
     setLoading(true); setResult(null); setError("");
-    const systemPrompt = `You are ScamShield, an expert scam and fraud detection AI. Analyze messages for scam indicators with precision.
+    const systemPrompt = `You are ScamShield, an expert scam and fraud detection AI. Analyze messages or screenshots for scam indicators with precision.
 Respond ONLY in this exact JSON format (no markdown, no extra text):
 {"verdict":"DANGER"|"WARNING"|"SAFE","scamType":"string","riskScore":0-100,"summary":"1-2 sentences","redFlags":["flag1","flag2"],"whatToDo":["action1","action2"]}`;
     try {
+      let messages;
+      if (mode === "image") {
+        messages = [
+          { role: "user", content: [
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } },
+            { type: "text", text: `${systemPrompt}\n\nAnalyze this screenshot for scams.` }
+          ]}
+        ];
+      } else {
+        messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Analyze this message:\n\n"${input}"` }
+        ];
+      }
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile", max_tokens: 1000,
-          messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `Analyze this message:\n\n"${input}"` }],
+          model: mode === "image" ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile",
+          max_tokens: 1000, messages,
         }),
       });
       const data = await res.json();
@@ -282,6 +312,15 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
         </div>
       </div>
 
+      {/* Mode Toggle */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+        {[["📝 Paste Text", "text"], ["📸 Upload Screenshot", "image"]].map(([label, m]) => (
+          <button key={m} onClick={() => { setMode(m); setResult(null); setError(""); }}
+            style={{ flex: 1, padding: "12px", background: mode === m ? "rgba(255,184,0,0.12)" : "rgba(255,255,255,0.03)", border: `1px solid ${mode === m ? "rgba(255,184,0,0.5)" : "rgba(255,255,255,0.09)"}`, borderRadius: "8px", color: mode === m ? "#ffb800" : "rgba(200,212,224,0.5)", fontSize: "12px", fontWeight: mode === m ? "700" : "400", cursor: "pointer", fontFamily: "inherit", transition: "all 0.25s", letterSpacing: "0.05em" }}
+          >{label}</button>
+        ))}
+      </div>
+
       <div style={{ marginBottom: "16px" }}>
         <div style={{ fontSize: "10px", color: "rgba(200,212,224,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "10px" }}>Try an example →</div>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -295,19 +334,49 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
         </div>
       </div>
 
-      <div style={{ position: "relative", marginBottom: "14px" }}>
-        <textarea value={input} onChange={e => { setText(e.target.value); setResult(null); }}
-          placeholder="Paste suspicious message here..." rows={6}
-          style={{ width: "100%", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "10px", padding: "20px", color: "#f0f4f8", fontSize: "14px", lineHeight: "1.75", fontFamily: "inherit", resize: "none", outline: "none", transition: "all 0.3s", boxSizing: "border-box" }}
-          onFocus={e => { e.target.style.borderColor = "rgba(255,184,0,0.5)"; e.target.style.boxShadow = "0 0 0 3px rgba(255,184,0,0.07)"; }}
-          onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.09)"; e.target.style.boxShadow = "none"; }}
-        />
-        {input && <button onClick={() => { setText(""); setResult(null); }} style={{ position: "absolute", top: "12px", right: "12px", background: "none", border: "none", color: "rgba(200,212,224,0.25)", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "4px", transition: "color 0.2s" }} onMouseEnter={e => e.currentTarget.style.color = "#ff3b3b"} onMouseLeave={e => e.currentTarget.style.color = "rgba(200,212,224,0.25)"}>✕</button>}
-        {input && <div style={{ position: "absolute", bottom: "12px", right: "16px", fontSize: "10px", color: "rgba(200,212,224,0.2)" }}>{input.length} chars</div>}
-      </div>
+      {mode === "text" ? (
+        <div style={{ position: "relative", marginBottom: "14px" }}>
+          <textarea value={input} onChange={e => { setText(e.target.value); setResult(null); }}
+            placeholder="Paste suspicious message here..." rows={6}
+            style={{ width: "100%", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "10px", padding: "20px", color: "#f0f4f8", fontSize: "14px", lineHeight: "1.75", fontFamily: "inherit", resize: "none", outline: "none", transition: "all 0.3s", boxSizing: "border-box" }}
+            onFocus={e => { e.target.style.borderColor = "rgba(255,184,0,0.5)"; e.target.style.boxShadow = "0 0 0 3px rgba(255,184,0,0.07)"; }}
+            onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,0.09)"; e.target.style.boxShadow = "none"; }}
+          />
+          {input && <button onClick={() => { setText(""); setResult(null); }} style={{ position: "absolute", top: "12px", right: "12px", background: "none", border: "none", color: "rgba(200,212,224,0.25)", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: "4px", transition: "color 0.2s" }} onMouseEnter={e => e.currentTarget.style.color = "#ff3b3b"} onMouseLeave={e => e.currentTarget.style.color = "rgba(200,212,224,0.25)"}>✕</button>}
+          {input && <div style={{ position: "absolute", bottom: "12px", right: "16px", fontSize: "10px", color: "rgba(200,212,224,0.2)" }}>{input.length} chars</div>}
+        </div>
+      ) : (
+        <div style={{ marginBottom: "14px" }}>
+          <label style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            width: "100%", minHeight: "180px", background: "rgba(255,255,255,0.025)",
+            border: `2px dashed ${imagePreview ? "rgba(255,184,0,0.5)" : "rgba(255,255,255,0.1)"}`,
+            borderRadius: "10px", cursor: "pointer", transition: "all 0.3s", boxSizing: "border-box",
+            overflow: "hidden", position: "relative",
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,184,0,0.5)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = imagePreview ? "rgba(255,184,0,0.5)" : "rgba(255,255,255,0.1)"}
+          >
+            {imagePreview ? (
+              <>
+                <img src={imagePreview} alt="preview" style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "8px", objectFit: "contain" }} />
+                <button onClick={e => { e.preventDefault(); setImage(null); setImagePreview(null); setResult(null); }}
+                  style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(255,59,59,0.8)", border: "none", color: "white", borderRadius: "50%", width: "28px", height: "28px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "24px" }}>
+                <div style={{ fontSize: "40px", marginBottom: "12px" }}>📸</div>
+                <div style={{ color: "#ffb800", fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>Click to upload screenshot</div>
+                <div style={{ color: "rgba(200,212,224,0.35)", fontSize: "12px" }}>Supports JPG, PNG, WebP</div>
+              </div>
+            )}
+            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+          </label>
+        </div>
+      )}
 
-      <button onClick={analyze} disabled={loading || !input.trim()}
-        style={{ width: "100%", padding: "17px", background: loading ? "rgba(255,184,0,0.12)" : (!input.trim() ? "rgba(255,184,0,0.08)" : "linear-gradient(135deg,#ffb800,#ffd000)"), border: "1px solid", borderColor: !input.trim() ? "rgba(255,184,0,0.15)" : "rgba(255,184,0,0.6)", borderRadius: "8px", color: loading || !input.trim() ? "rgba(255,184,0,0.4)" : "#080c12", fontSize: "13px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "all 0.3s", boxShadow: input.trim() && !loading ? "0 0 30px rgba(255,184,0,0.2)" : "none" }}
+      <button onClick={analyze} disabled={loading || (mode === "text" ? !input.trim() : !image)}
+                  style={{ width: "100%", padding: "17px", background: loading ? "rgba(255,184,0,0.12)" : (!(mode === "text" ? input.trim() : image) ? "rgba(255,184,0,0.08)" : "linear-gradient(135deg,#ffb800,#ffd000)"), border: "1px solid", borderColor: !(mode === "text" ? input.trim() : image) ? "rgba(255,184,0,0.15)" : "rgba(255,184,0,0.6)", borderRadius: "8px", color: loading || !(mode === "text" ? input.trim() : image) ? "rgba(255,184,0,0.4)" : "#080c12", fontSize: "13px", fontWeight: "800", letterSpacing: "0.12em", textTransform: "uppercase", cursor: loading || !(mode === "text" ? input.trim() : image) ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "all 0.3s" }}
         onMouseEnter={e => { if (!loading && input.trim()) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 40px rgba(255,184,0,0.35)"; } }}
         onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = input.trim() && !loading ? "0 0 30px rgba(255,184,0,0.2)" : "none"; }}
       >
